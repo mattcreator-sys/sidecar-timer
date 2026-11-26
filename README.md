@@ -10,8 +10,8 @@ your Sidecar screen over USB, and let the buddy keep time while you work.
 1. Open the timer in desktop Chrome or Edge.
 2. Plug the screen into the computer and choose **Connect screen**.
 3. Select a timer and press **Start**.
-4. Turn on **Show weather when idle** and search for your city or ZIP code. The
-   screen shows the selected forecast after 12 seconds without activity.
+4. Turn on **Show weather when idle** and search for any Washington city or ZIP
+   code. The screen shows the selected forecast after 12 seconds without activity.
 
 Your timer list stays in the browser on your computer. Sidecar does not require an account.
 Forecast data comes from the [National Weather Service](https://www.weather.gov/).

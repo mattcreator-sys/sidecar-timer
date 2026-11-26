@@ -193,7 +193,8 @@ async function searchWeatherPlaces(query) {
   renderPlaceResults('Searching places…');
   try {
     const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
-    url.search = new URLSearchParams({ name: trimmed, count: '8', language: 'en', format: 'json', countryCode: 'US' });
+    const searchName = /,\s*washington$/i.test(trimmed) ? trimmed : `${trimmed}, Washington`;
+    url.search = new URLSearchParams({ name: searchName, count: '20', language: 'en', format: 'json', countryCode: 'US' });
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) throw new Error(`Place search failed (${response.status})`);
     const data = await response.json();
