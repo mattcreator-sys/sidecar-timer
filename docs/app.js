@@ -125,6 +125,7 @@ let placeSearchRequest = null;
 let placeSearchSequence = 0;
 let placeSearchDebounce = 0;
 const WEATHER_IDLE_DELAY_MS = 12000;
+const WEATHER_RETRY_DELAY_MS = 30000;
 
 sessionCountLabel.textContent = String(sessionCount);
 
@@ -241,7 +242,7 @@ function chooseWeatherPlace(index) {
 async function loadWeather(force = false) {
   if (weatherRequest) return weatherRequest;
   if (!force && weatherData && Date.now() - weatherFetchedAt < 30 * 60 * 1000) return weatherData;
-  if (!force && !weatherData && weatherAttemptedAt && Date.now() - weatherAttemptedAt < 5 * 60 * 1000) return null;
+  if (!force && !weatherData && weatherAttemptedAt && Date.now() - weatherAttemptedAt < WEATHER_RETRY_DELAY_MS) return null;
   const location = weatherPlace;
   const locationKey = `${location.latitude},${location.longitude}`;
   const controller = new AbortController();
@@ -263,7 +264,6 @@ async function loadWeather(force = false) {
     const dayPeriod = current.isDaytime ? current : next;
     const nightPeriod = current.isDaytime ? next : current;
     if (`${weatherPlace.latitude},${weatherPlace.longitude}` !== locationKey) return null;
-    const conditions = weatherFromCode(Number(current.weather_code));
     weatherData = {
       city: placeLabel(location).slice(0, 24),
       temperature: Number.isFinite(Number(current.temperature)) ? Number(current.temperature) : 0,
@@ -273,12 +273,15 @@ async function loadWeather(force = false) {
       icon: weatherCodeFor(current.shortForecast),
     };
     weatherFetchedAt = Date.now();
+    weatherNote.textContent = 'Forecast by NWS · Places by GeoNames.';
+    weatherNote.classList.remove('is-error');
     renderDevicePreview();
     sendState(true);
     return weatherData;
   })().catch(error => {
     if (error.name === 'AbortError') return null;
-    weatherNote.textContent = 'Weather unavailable. Check your connection and try again.';
+    console.warn('Weather request failed:', error);
+    weatherNote.textContent = `Weather unavailable: ${error.message || 'connection problem'}. Retrying shortly.`;
     weatherNote.classList.add('is-error');
     return null;
   }).finally(() => {
@@ -455,7 +458,7 @@ function tick() {
   refreshDeviceMode();
   if (deviceMode === 'weather' && (weatherFetchedAt
       ? Date.now() - weatherFetchedAt > 30 * 60 * 1000
-      : weatherAttemptedAt && Date.now() - weatherAttemptedAt > 5 * 60 * 1000)) loadWeather(true);
+      : weatherAttemptedAt && Date.now() - weatherAttemptedAt > WEATHER_RETRY_DELAY_MS)) loadWeather(true);
   if (!running) return;
   remainingSeconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
   if (remainingSeconds === 0) {
