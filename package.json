@@ -1,0 +1,9 @@
+{
+  "name": "sidecar-timer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sidecar Timer browser app",
+  "scripts": {
+    "prepare-pages": "node scripts/prepare-pages.mjs"
+  }
+}

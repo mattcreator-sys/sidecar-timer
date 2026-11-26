@@ -1,0 +1,21 @@
+# Keep macOS junk and editor files out of the repo
+.DS_Store
+._*
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+node_modules/
+
+# Arduino build output
+build/
+*.bin
+*.elf
+
+# Private product design and firmware files stay on this computer.
+/firmware/
+/case/
+
+# Don't commit huge raw captures / originals
+*.mov
+*.MOV

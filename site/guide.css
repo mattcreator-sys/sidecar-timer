@@ -1,0 +1,55 @@
+/* Setup guide (guide.html) */
+.guide {
+  min-width: 320px;
+  margin: 0;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: radial-gradient(#d3d9c5 0.65px, transparent 0.65px);
+  background-size: 12px 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.guide-page { width: min(780px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 72px; }
+.guide-head { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.guide-brand { display: flex; align-items: center; gap: 12px; }
+.guide-brand .wordmark-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: var(--ink); color: var(--green); font-family: Georgia, serif; font-size: 20px; }
+.guide-kicker { margin: 0; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: 1.4px; }
+.guide-brand h1 { margin: 2px 0 0; font-family: var(--sans); font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+.guide-meta { max-width: 330px; color: var(--muted); font-size: 12px; }
+.guide-meta p { margin: 0 0 4px; }
+.guide-meta strong { color: var(--ink); font-weight: 600; }
+.guide-cols { display: grid; gap: 22px; grid-template-columns: 1fr 1fr; }
+.guide-block { margin-top: 26px; }
+.guide-block h2 { display: flex; align-items: center; gap: 9px; margin: 0 0 9px; font-size: 15px; font-weight: 800; letter-spacing: -0.1px; }
+.step-num { display: grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; border-radius: 50%; background: var(--ink); color: var(--green); font-family: var(--mono); font-size: 11px; }
+.guide-block p { margin: 0 0 9px; }
+.guide-block em { font-style: italic; }
+.note { padding: 9px 12px; border-left: 2px solid var(--coral); background: #ffffffaa; color: var(--muted); font-size: 12px; border-radius: 0 6px 6px 0; }
+.guide-list { margin: 0 0 9px; padding-left: 18px; }
+.guide-list li { margin-bottom: 5px; }
+.guide-split { display: grid; gap: 26px; grid-template-columns: 1fr 1fr; }
+.mood-row { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-bottom: 9px; }
+.mood { padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: #ffffffaa; font-size: 12px; }
+.mood p { margin: 7px 0 0; color: var(--muted); }
+.mood p strong { color: var(--ink); }
+.mood-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-family: var(--mono); font-size: 9px; letter-spacing: 1px; }
+.mood-idle { background: #cdf1dd; color: #22473d; }
+.mood-focus { background: #dcf7b9; color: #4c6d1c; }
+.mood-done { background: #9fdcf2; color: #1f4a5c; }
+.fix-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.fix-table th, .fix-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.fix-table th { color: var(--muted); font-family: var(--mono); font-size: 9px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+.guide-foot { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: 0.6px; }
+.print-hint { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; width: min(780px, calc(100% - 40px)); margin: 0 auto 40px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #ffffffaa; font-size: 12px; }
+.print-hint p { margin: 0; color: var(--muted); }
+.print-hint button { padding: 7px 14px; border: 0; border-radius: 999px; background: var(--ink); color: var(--green); font-size: 12px; font-weight: 600; cursor: pointer; }
+@media (max-width: 680px) {
+  .guide-cols, .guide-split, .mood-row { grid-template-columns: 1fr; }
+}
+@media print {
+  .guide { background: #fff; font-size: 11pt; }
+  .print-hint { display: none; }
+  .guide-page { padding-top: 0; }
+  .guide-block { break-inside: avoid; }
+}
