@@ -184,7 +184,15 @@ h1 em { color: var(--green-deep); font-family: 'Playfair Display', Georgia, seri
 .weather-toggle input { width: 14px; height: 14px; margin: 0; accent-color: var(--green-deep); }
 .weather-options { display: grid; gap: 5px; }
 .weather-options[hidden] { display: none; }
-#weather-city { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); font-size: 10px; }
+#weather-place-search { width: 100%; padding: 7px 8px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); font: inherit; font-size: 10px; }
+#weather-place-search::placeholder { color: var(--muted); }
+.location-results { display: grid; max-height: 156px; overflow-y: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); }
+.location-results[hidden] { display: none; }
+.location-result { width: 100%; padding: 7px 8px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; font-size: 10px; cursor: pointer; }
+.location-result:last-child { border-bottom: 0; }
+.location-result:hover, .location-result:focus-visible { background: #e7edda; outline: none; }
+.location-result-note { margin: 0; padding: 8px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.selected-place { margin: 0; color: var(--ink); font-size: 9px; font-weight: 600; }
 .weather-attribution { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.4; }
 .weather-attribution.is-error { color: #b64337; }
 .device-copy .browser-note + .eyebrow { margin-top: 15px; }

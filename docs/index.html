@@ -85,12 +85,11 @@
                 <span>Show weather when idle</span>
               </label>
               <div class="weather-options" id="weather-options">
-                <select id="weather-city" aria-label="Forecast city">
-                  <option value="bothell">Bothell, WA</option>
-                  <option value="kenmore">Kenmore, WA</option>
-                  <option value="woodinville">Woodinville, WA</option>
-                </select>
-                <p class="weather-attribution" id="weather-note">Forecast by the National Weather Service.</p>
+                <label class="sr-only" for="weather-place-search">Search for your city or ZIP code</label>
+                <input id="weather-place-search" type="search" autocomplete="off" placeholder="Search city or ZIP code" aria-controls="weather-place-results" aria-expanded="false">
+                <div class="location-results" id="weather-place-results" role="listbox" hidden></div>
+                <p class="selected-place" id="weather-selected-place">Bothell, Washington</p>
+                <p class="weather-attribution" id="weather-note">Forecast by NWS · Places by GeoNames.</p>
               </div>
             </div>
             <p class="eyebrow">MOUNT SIDE</p>

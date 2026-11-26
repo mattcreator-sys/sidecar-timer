@@ -23,7 +23,9 @@ const deviceWeatherTemp = document.querySelector('#device-weather-temp');
 const deviceWeatherSummary = document.querySelector('#device-weather-summary');
 const deviceWeatherHighLow = document.querySelector('#device-weather-high-low');
 const weatherIdleToggle = document.querySelector('#weather-idle-toggle');
-const weatherCitySelect = document.querySelector('#weather-city');
+const weatherPlaceSearch = document.querySelector('#weather-place-search');
+const weatherPlaceResults = document.querySelector('#weather-place-results');
+const weatherSelectedPlace = document.querySelector('#weather-selected-place');
 const weatherOptions = document.querySelector('#weather-options');
 const weatherNote = document.querySelector('#weather-note');
 const announcement = document.querySelector('#announcement');
@@ -31,13 +33,21 @@ const mountLeft = document.querySelector('#mount-left');
 const mountRight = document.querySelector('#mount-right');
 const deviceScreen = document.querySelector('.device-screen');
 let mountSide = localStorage.getItem('sidecar-mount-side') === 'left' ? 'left' : 'right';
-const weatherLocations = {
-  bothell: { name: 'Bothell, WA', latitude: 47.7623, longitude: -122.2054 },
-  kenmore: { name: 'Kenmore, WA', latitude: 47.7573, longitude: -122.2440 },
-  woodinville: { name: 'Woodinville, WA', latitude: 47.7543, longitude: -122.1635 },
-};
-const savedWeatherCity = localStorage.getItem('sidecar-weather-city');
-weatherCitySelect.value = weatherLocations[savedWeatherCity] ? savedWeatherCity : 'bothell';
+const defaultWeatherPlace = { name: 'Bothell', region: 'Washington', country: 'United States', latitude: 47.7623, longitude: -122.2054 };
+function validWeatherPlace(place) {
+  return place && typeof place.name === 'string' && Number.isFinite(Number(place.latitude))
+    && Number.isFinite(Number(place.longitude));
+}
+let weatherPlace = defaultWeatherPlace;
+try {
+  const savedWeatherPlace = JSON.parse(localStorage.getItem('sidecar-weather-place') || 'null');
+  if (validWeatherPlace(savedWeatherPlace)) weatherPlace = savedWeatherPlace;
+} catch {}
+function placeLabel(place) {
+  return [place.name, place.region, place.country && place.country !== 'United States' ? place.country : '']
+    .filter(Boolean).join(', ');
+}
+weatherSelectedPlace.textContent = placeLabel(weatherPlace);
 weatherIdleToggle.checked = localStorage.getItem('sidecar-weather-idle') !== 'false';
 weatherOptions.hidden = !weatherIdleToggle.checked;
 
@@ -110,6 +120,10 @@ let weatherData = null;
 let weatherFetchedAt = 0;
 let weatherAttemptedAt = 0;
 let weatherRequest = null;
+let weatherRequestController = null;
+let placeSearchRequest = null;
+let placeSearchSequence = 0;
+let placeSearchDebounce = 0;
 const WEATHER_IDLE_DELAY_MS = 12000;
 
 sessionCountLabel.textContent = String(sessionCount);
@@ -142,20 +156,103 @@ function weatherCodeFor(summary) {
   return 'sun';
 }
 
+function renderPlaceResults(message = '') {
+  weatherPlaceResults.replaceChildren();
+  const results = placeSearchRequest?.results || [];
+  if (message) {
+    const note = document.createElement('p');
+    note.className = 'location-result-note';
+    note.textContent = message;
+    weatherPlaceResults.append(note);
+  } else {
+    results.forEach((place, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'location-result';
+      button.setAttribute('role', 'option');
+      button.textContent = placeLabel(place);
+      button.addEventListener('click', () => chooseWeatherPlace(index));
+      weatherPlaceResults.append(button);
+    });
+  }
+  weatherPlaceResults.hidden = false;
+  weatherPlaceSearch.setAttribute('aria-expanded', 'true');
+}
+
+async function searchWeatherPlaces(query) {
+  const sequence = ++placeSearchSequence;
+  placeSearchRequest?.controller.abort();
+  const controller = new AbortController();
+  placeSearchRequest = { results: [], controller };
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    weatherPlaceResults.hidden = true;
+    weatherPlaceSearch.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  renderPlaceResults('Searching places…');
+  try {
+    const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+    url.search = new URLSearchParams({ name: trimmed, count: '8', language: 'en', format: 'json', countryCode: 'US' });
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Place search failed (${response.status})`);
+    const data = await response.json();
+    if (sequence !== placeSearchSequence) return;
+    const results = (data.results || []).map(item => ({
+      name: String(item.name || ''),
+      region: String(item.admin1 || ''),
+      country: String(item.country || ''),
+      countryCode: String(item.country_code || ''),
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude),
+    })).filter(validWeatherPlace);
+    placeSearchRequest = { results, controller };
+    renderPlaceResults(results.length ? '' : 'No matching places found. Try a nearby city or ZIP code.');
+  } catch (error) {
+    if (error.name === 'AbortError' || sequence !== placeSearchSequence) return;
+    placeSearchRequest = { results: [], controller };
+    renderPlaceResults('Place search is unavailable. Check your connection and try again.');
+  }
+}
+
+function chooseWeatherPlace(index) {
+  const place = placeSearchRequest?.results[index];
+  if (!place) return;
+  weatherPlace = place;
+  weatherRequestController?.abort();
+  weatherRequestController = null;
+  weatherRequest = null;
+  localStorage.setItem('sidecar-weather-place', JSON.stringify(place));
+  weatherSelectedPlace.textContent = placeLabel(place);
+  weatherPlaceSearch.value = '';
+  weatherPlaceResults.hidden = true;
+  weatherPlaceSearch.setAttribute('aria-expanded', 'false');
+  weatherData = null;
+  weatherFetchedAt = 0;
+  weatherAttemptedAt = 0;
+  weatherNote.textContent = 'Forecast by NWS · Places by GeoNames.';
+  weatherNote.classList.remove('is-error');
+  lastActivityAt = Date.now();
+  renderDevicePreview();
+  if (deviceMode === 'weather') loadWeather(true);
+}
+
 async function loadWeather(force = false) {
   if (weatherRequest) return weatherRequest;
   if (!force && weatherData && Date.now() - weatherFetchedAt < 30 * 60 * 1000) return weatherData;
   if (!force && !weatherData && weatherAttemptedAt && Date.now() - weatherAttemptedAt < 5 * 60 * 1000) return null;
-  const locationKey = weatherCitySelect.value;
-  const location = weatherLocations[locationKey] || weatherLocations.bothell;
+  const location = weatherPlace;
+  const locationKey = `${location.latitude},${location.longitude}`;
+  const controller = new AbortController();
+  weatherRequestController = controller;
   weatherAttemptedAt = Date.now();
-  weatherRequest = (async () => {
+  const request = (async () => {
     const headers = { Accept: 'application/geo+json' };
     const pointUrl = `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
-    const pointResponse = await fetch(pointUrl, { headers });
+    const pointResponse = await fetch(pointUrl, { headers, signal: controller.signal });
     if (!pointResponse.ok) throw new Error(`Weather lookup failed (${pointResponse.status})`);
     const point = await pointResponse.json();
-    const forecastResponse = await fetch(point.properties.forecast, { headers });
+    const forecastResponse = await fetch(point.properties.forecast, { headers, signal: controller.signal });
     if (!forecastResponse.ok) throw new Error(`Forecast unavailable (${forecastResponse.status})`);
     const forecast = await forecastResponse.json();
     const periods = forecast.properties.periods || [];
@@ -164,9 +261,10 @@ async function loadWeather(force = false) {
     const next = periods[1] || current;
     const dayPeriod = current.isDaytime ? current : next;
     const nightPeriod = current.isDaytime ? next : current;
-    if (weatherCitySelect.value !== locationKey) return null;
+    if (`${weatherPlace.latitude},${weatherPlace.longitude}` !== locationKey) return null;
+    const conditions = weatherFromCode(Number(current.weather_code));
     weatherData = {
-      city: location.name,
+      city: placeLabel(location).slice(0, 24),
       temperature: Number.isFinite(Number(current.temperature)) ? Number(current.temperature) : 0,
       summary: String(current.shortForecast || 'Weather').slice(0, 24),
       high: Number.isFinite(Number(dayPeriod.temperature)) ? Number(dayPeriod.temperature) : 0,
@@ -178,10 +276,17 @@ async function loadWeather(force = false) {
     sendState(true);
     return weatherData;
   })().catch(error => {
-    weatherNote.textContent = 'Weather unavailable. The timer still works.';
+    if (error.name === 'AbortError') return null;
+    weatherNote.textContent = 'Weather unavailable. Check your connection and try again.';
     weatherNote.classList.add('is-error');
     return null;
-  }).finally(() => { weatherRequest = null; });
+  }).finally(() => {
+    if (weatherRequestController === controller) {
+      weatherRequest = null;
+      weatherRequestController = null;
+    }
+  });
+  weatherRequest = request;
   return weatherRequest;
 }
 
@@ -366,22 +471,28 @@ function markActivity() {
 
 document.addEventListener('pointerdown', markActivity, { passive: true });
 document.addEventListener('keydown', markActivity);
+weatherPlaceSearch.addEventListener('input', () => {
+  clearTimeout(placeSearchDebounce);
+  const query = weatherPlaceSearch.value;
+  placeSearchDebounce = setTimeout(() => searchWeatherPlaces(query), 350);
+});
+weatherPlaceSearch.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    weatherPlaceResults.hidden = true;
+    weatherPlaceSearch.setAttribute('aria-expanded', 'false');
+  }
+});
+document.addEventListener('pointerdown', event => {
+  if (!weatherPlaceResults.contains(event.target) && event.target !== weatherPlaceSearch) {
+    weatherPlaceResults.hidden = true;
+    weatherPlaceSearch.setAttribute('aria-expanded', 'false');
+  }
+}, { passive: true });
 weatherIdleToggle.addEventListener('change', () => {
   localStorage.setItem('sidecar-weather-idle', String(weatherIdleToggle.checked));
   weatherOptions.hidden = !weatherIdleToggle.checked;
   lastActivityAt = Date.now();
   refreshDeviceMode();
-});
-weatherCitySelect.addEventListener('change', () => {
-  localStorage.setItem('sidecar-weather-city', weatherCitySelect.value);
-  weatherData = null;
-  weatherFetchedAt = 0;
-  weatherAttemptedAt = 0;
-  weatherNote.textContent = 'Forecast by the National Weather Service.';
-  weatherNote.classList.remove('is-error');
-  lastActivityAt = Date.now();
-  renderDevicePreview();
-  if (deviceMode === 'weather') loadWeather(true);
 });
 
 startButton.addEventListener('click', () => {
